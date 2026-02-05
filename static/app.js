@@ -144,11 +144,11 @@ async function loadTradeHistory() {
     result.forEach(trade => {
         const row = document.createElement('tr');
         row.innerHTML = `
-            <td>${trade.buyer}</td>
-            <td>${trade.seller}</td>
-            <td>${trade.meal}</td>
-            <td>${trade.qty}</td>
-            <td>$${trade.price.toFixed(2)}</td>
+            <td>${trade.buyer || 'N/A'}</td>
+            <td>${trade.seller || 'N/A'}</td>
+            <td>${trade.meal_name || 'N/A'}</td>
+            <td>${trade.quantity || 0}</td>
+            <td>$${trade.price ? trade.price.toFixed(2) : '0.00'}</td>
         `;
         tbody.appendChild(row);
     });
