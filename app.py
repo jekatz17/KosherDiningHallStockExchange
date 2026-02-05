@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, jsonify, session
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
 from database import db
 from market_service import MarketService
@@ -8,6 +8,10 @@ from init_db import init_database
 
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
+
+# Enable permanent sessions (stays logged in across browser restarts)
+app.config['SESSION_PERMANENT'] = True
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)  # Session lasts 7 days
 
 # Database configuration
 # For development, use SQLite
@@ -36,6 +40,7 @@ def index():
 def login():
     username = request.json.get('username')
     if username in FRIENDS:
+        session.permanent = True  # Make session persistent
         session['user'] = username
         return jsonify({'success': True, 'user': username})
     return jsonify({'success': False, 'message': 'Invalid user'}), 401

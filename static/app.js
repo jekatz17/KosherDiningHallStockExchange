@@ -15,18 +15,23 @@ async function apiCall(endpoint, method = 'GET', data = null) {
     return await response.json();
 }
 
+// Global variable to store meals by category
+let allMeals = [];
+
 // Login/Logout
 async function login() {
     const username = document.getElementById('loginUsername').value;
     const result = await apiCall('/api/login', 'POST', { username });
     
     if (result.success) {
+        // Store username in localStorage for persistent sessions
+        localStorage.setItem('username', username);
+        
         document.getElementById('loginSection').style.display = 'none';
         document.getElementById('mainApp').style.display = 'block';
         loadUserData();
         loadMarketData();
         loadTradeHistory();
-        populateMealDropdowns();
         
         // Auto-refresh every 5 seconds
         setInterval(() => {
@@ -41,10 +46,36 @@ async function login() {
 
 async function logout() {
     await apiCall('/api/logout', 'POST');
+    localStorage.removeItem('username');
     document.getElementById('loginSection').style.display = 'block';
     document.getElementById('mainApp').style.display = 'none';
     document.getElementById('loginUsername').value = '';
 }
+
+// Check for existing session on page load
+window.addEventListener('DOMContentLoaded', async () => {
+    const savedUsername = localStorage.getItem('username');
+    if (savedUsername) {
+        // Try to restore session
+        const result = await apiCall('/api/login', 'POST', { username: savedUsername });
+        if (result.success) {
+            document.getElementById('loginSection').style.display = 'none';
+            document.getElementById('mainApp').style.display = 'block';
+            loadUserData();
+            loadMarketData();
+            loadTradeHistory();
+            
+            // Auto-refresh every 5 seconds
+            setInterval(() => {
+                loadUserData();
+                loadMarketData();
+                loadTradeHistory();
+            }, 5000);
+        } else {
+            localStorage.removeItem('username');
+        }
+    }
+});
 
 // Load user data
 async function loadUserData() {
@@ -62,6 +93,9 @@ async function loadMarketData() {
     const tbody = document.getElementById('marketBody');
     tbody.innerHTML = '';
     
+    // Store all meals globally
+    allMeals = result.meals;
+    
     result.meals.forEach(meal => {
         const row = document.createElement('tr');
         row.innerHTML = `
@@ -73,6 +107,31 @@ async function loadMarketData() {
             <td>${meal.spread ? '$' + meal.spread.toFixed(2) : 'N/A'}</td>
         `;
         tbody.appendChild(row);
+    });
+}
+
+// Update meal dropdown based on selected category
+function updateMealDropdown(type) {
+    const categorySelect = document.getElementById(type + 'Category');
+    const mealSelect = document.getElementById(type + 'Meal');
+    const selectedCategory = categorySelect.value;
+    
+    mealSelect.innerHTML = '';
+    
+    if (!selectedCategory) {
+        const option = document.createElement('option');
+        option.value = '';
+        option.textContent = 'Select category first';
+        mealSelect.appendChild(option);
+        return;
+    }
+    
+    const mealsInCategory = allMeals.filter(meal => meal.category === selectedCategory);
+    mealsInCategory.forEach(meal => {
+        const option = document.createElement('option');
+        option.value = meal.name;
+        option.textContent = meal.name;
+        mealSelect.appendChild(option);
     });
 }
 
@@ -114,27 +173,6 @@ async function loadPortfolio() {
     display.innerHTML = html;
 }
 
-// Populate meal dropdowns
-async function populateMealDropdowns() {
-    const result = await apiCall('/api/market_summary');
-    
-    const dropdowns = [
-        document.getElementById('buyIPOMeal'),
-        document.getElementById('secondaryBuyMeal'),
-        document.getElementById('sellMeal')
-    ];
-    
-    dropdowns.forEach(select => {
-        select.innerHTML = '';
-        result.meals.forEach(meal => {
-            const option = document.createElement('option');
-            option.value = meal.name;
-            option.textContent = meal.name;
-            select.appendChild(option);
-        });
-    });
-}
-
 // Start IPO
 async function startIPO() {
     const result = await apiCall('/api/start_ipo', 'POST');
@@ -149,11 +187,19 @@ async function buyIPO() {
     const meal = document.getElementById('buyIPOMeal').value;
     const qty = parseInt(document.getElementById('buyIPOQty').value);
     
+    if (!meal) {
+        alert('Please select a category and meal');
+        return;
+    }
+    
     const result = await apiCall('/api/buy_ipo', 'POST', { meal, qty });
     alert(result.message);
     
     if (result.success) {
         closeModal('buyIPO');
+        // Reset dropdowns
+        document.getElementById('buyIPOCategory').value = '';
+        document.getElementById('buyIPOMeal').innerHTML = '<option value="">Select category first</option>';
         loadUserData();
         loadMarketData();
         loadPortfolio();
@@ -168,11 +214,19 @@ async function secondaryBuy() {
     const qty = parseInt(document.getElementById('secondaryBuyQty').value);
     const snap_buy = document.getElementById('snapBuy').checked;
     
+    if (!meal) {
+        alert('Please select a category and meal');
+        return;
+    }
+    
     const result = await apiCall('/api/secondary_buy', 'POST', { meal, price, qty, snap_buy });
     alert(result.message);
     
     if (result.success) {
         closeModal('secondaryBuy');
+        // Reset dropdowns
+        document.getElementById('secondaryBuyCategory').value = '';
+        document.getElementById('secondaryBuyMeal').innerHTML = '<option value="">Select category first</option>';
         loadUserData();
         loadMarketData();
         loadPortfolio();
@@ -187,11 +241,19 @@ async function sell() {
     const qty = parseInt(document.getElementById('sellQty').value);
     const is_short = document.getElementById('isShort').checked;
     
+    if (!meal) {
+        alert('Please select a category and meal');
+        return;
+    }
+    
     const result = await apiCall('/api/sell', 'POST', { meal, price, qty, is_short });
     alert(result.message);
     
     if (result.success) {
         closeModal('sell');
+        // Reset dropdowns
+        document.getElementById('sellCategory').value = '';
+        document.getElementById('sellMeal').innerHTML = '<option value="">Select category first</option>';
         loadUserData();
         loadMarketData();
         loadPortfolio();

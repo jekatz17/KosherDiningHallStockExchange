@@ -23,12 +23,15 @@ class MarketService:
     def get_current_ipo_price():
         """Calculate current IPO price based on time elapsed"""
         state = MarketService.get_or_create_market_state()
-        if not state.ipo_start_time:
+        
+        # If IPO hasn't started or isn't active, return start price
+        if not state.ipo_start_time or not state.ipo_active:
             return IPO_START_PRICE
         
         elapsed = (datetime.utcnow() - state.ipo_start_time).total_seconds()
         decay = int(elapsed // IPO_DECAY_INTERVAL) * IPO_DECAY_RATE
-        return max(0.0, IPO_START_PRICE - decay)
+        current_price = max(0.0, IPO_START_PRICE - decay)
+        return current_price
     
     @staticmethod
     def start_ipo():

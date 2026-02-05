@@ -75,6 +75,19 @@ def backup_database():
     shutil.copy("dining_exchange.db", backup_file)
     print(f"Database backed up to: {backup_file}")
 
+def reset_ipo():
+    """Reset IPO state (stop IPO and reset price to 200)"""
+    with app.app_context():
+        from database import MarketState
+        state = MarketState.query.first()
+        if state:
+            state.ipo_start_time = None
+            state.ipo_active = False
+            db.session.commit()
+            print("IPO state reset - price back to $200.00")
+        else:
+            print("No market state found")
+
 def main():
     if len(sys.argv) < 2:
         print("Usage: python manage_db.py [command]")
@@ -84,6 +97,7 @@ def main():
         print("  users       - List all users")
         print("  meals       - List all meals")
         print("  backup      - Create a database backup")
+        print("  reset_ipo   - Reset IPO state (price back to $200)")
         return
     
     command = sys.argv[1]
@@ -102,6 +116,8 @@ def main():
         list_meals()
     elif command == "backup":
         backup_database()
+    elif command == "reset_ipo":
+        reset_ipo()
     else:
         print(f"Unknown command: {command}")
 
