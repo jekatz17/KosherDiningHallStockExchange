@@ -70,6 +70,11 @@ def market_summary():
 def start_ipo():
     if 'user' not in session:
         return jsonify({'success': False, 'message': 'Not logged in'}), 401
+    
+    # Only Josh can start the IPO
+    if session['user'] != 'Josh':
+        return jsonify({'success': False, 'message': 'Only Josh can start the IPO'}), 403
+    
     MarketService.start_ipo()
     return jsonify({'success': True, 'ipo_price': MarketService.get_current_ipo_price()})
 

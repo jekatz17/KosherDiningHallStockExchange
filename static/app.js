@@ -17,6 +17,9 @@ async function apiCall(endpoint, method = 'GET', data = null) {
 
 // Global variable to store meals by category
 let allMeals = [];
+let currentFilter = 'all';
+let priceHistory = {}; // Store price history for charts
+let chartInstance = null;
 
 // Login/Logout
 async function login() {
@@ -84,6 +87,15 @@ async function loadUserData() {
         document.getElementById('username').textContent = result.username;
         document.getElementById('balance').textContent = result.balance.toFixed(2);
         document.getElementById('ipoPrice').textContent = result.ipo_price.toFixed(2);
+        
+        // Only show Start IPO button for Josh
+        const startIPOContainer = document.getElementById('startIPOContainer');
+        if (result.username !== 'Josh') {
+            const startBtn = startIPOContainer.querySelector('.btn-success');
+            if (startBtn) {
+                startBtn.style.display = 'none';
+            }
+        }
     }
 }
 
@@ -96,7 +108,39 @@ async function loadMarketData() {
     // Store all meals globally
     allMeals = result.meals;
     
-    result.meals.forEach(meal => {
+    // Populate chart meal selector
+    const chartSelect = document.getElementById('chartMealSelect');
+    if (chartSelect.options.length === 1) { // Only populate once
+        result.meals.forEach(meal => {
+            const option = document.createElement('option');
+            option.value = meal.name;
+            option.textContent = meal.name;
+            chartSelect.appendChild(option);
+        });
+    }
+    
+    // Filter meals based on current filter
+    const filteredMeals = currentFilter === 'all' 
+        ? result.meals 
+        : result.meals.filter(meal => meal.category === currentFilter);
+    
+    filteredMeals.forEach(meal => {
+        // Track price history for charts
+        if (!priceHistory[meal.name]) {
+            priceHistory[meal.name] = [];
+        }
+        if (meal.best_bid || meal.best_ask) {
+            const price = meal.best_bid || meal.best_ask;
+            priceHistory[meal.name].push({
+                time: Date.now(),
+                price: price
+            });
+            // Keep only last 20 data points
+            if (priceHistory[meal.name].length > 20) {
+                priceHistory[meal.name].shift();
+            }
+        }
+        
         const row = document.createElement('tr');
         row.innerHTML = `
             <td>${meal.name}</td>
@@ -104,9 +148,12 @@ async function loadMarketData() {
             <td>${meal.house_supply > 0 ? meal.house_supply : '-'}</td>
             <td>${meal.best_ask ? '$' + meal.best_ask.toFixed(2) : 'N/A'}</td>
             <td>${meal.best_bid ? '$' + meal.best_bid.toFixed(2) : 'N/A'}</td>
-            <td>${meal.spread ? '$' + meal.spread.toFixed(2) : 'N/A'}</td>
+            <td><canvas class="ticker-mini" id="mini-${meal.name.replace(/\s/g, '-')}" onclick="selectMealForChart('${meal.name}')"></canvas></td>
         `;
         tbody.appendChild(row);
+        
+        // Draw mini chart
+        drawMiniChart(meal.name);
     });
 }
 
@@ -275,4 +322,153 @@ window.onclick = function(event) {
     if (event.target.classList.contains('modal')) {
         event.target.style.display = 'none';
     }
+}
+
+// Switch between index tabs
+function switchIndex(category) {
+    currentFilter = category;
+    
+    // Update active tab
+    document.querySelectorAll('.index-tab').forEach(tab => {
+        tab.classList.remove('active');
+    });
+    document.getElementById('tab-' + category).classList.add('active');
+    
+    // Reload market data with filter
+    loadMarketData();
+}
+
+// Draw mini sparkline chart
+function drawMiniChart(mealName) {
+    const canvasId = 'mini-' + mealName.replace(/\s/g, '-');
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    const history = priceHistory[mealName] || [];
+    
+    if (history.length < 2) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        return;
+    }
+    
+    const prices = history.map(h => h.price);
+    const min = Math.min(...prices);
+    const max = Math.max(...prices);
+    const range = max - min || 1;
+    
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.strokeStyle = prices[prices.length - 1] >= prices[0] ? '#27ae60' : '#e74c3c';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    
+    prices.forEach((price, i) => {
+        const x = (i / (prices.length - 1)) * canvas.width;
+        const y = canvas.height - ((price - min) / range) * canvas.height;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+    });
+    
+    ctx.stroke();
+}
+
+// Select meal for full chart
+function selectMealForChart(mealName) {
+    document.getElementById('chartMealSelect').value = mealName;
+    updateChart();
+}
+
+// Update full price chart
+function updateChart() {
+    const mealName = document.getElementById('chartMealSelect').value;
+    if (!mealName) return;
+    
+    const canvas = document.getElementById('priceChart');
+    const ctx = canvas.getContext('2d');
+    const history = priceHistory[mealName] || [];
+    
+    if (history.length < 2) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#999';
+        ctx.font = '16px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('Not enough data yet', canvas.width / 2, canvas.height / 2);
+        return;
+    }
+    
+    const prices = history.map(h => h.price);
+    const min = Math.min(...prices);
+    const max = Math.max(...prices);
+    const range = max - min || 1;
+    const padding = 40;
+    
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Draw axes
+    ctx.strokeStyle = '#ddd';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(padding, padding);
+    ctx.lineTo(padding, canvas.height - padding);
+    ctx.lineTo(canvas.width - padding, canvas.height - padding);
+    ctx.stroke();
+    
+    // Draw grid lines
+    ctx.strokeStyle = '#f0f0f0';
+    for (let i = 0; i <= 5; i++) {
+        const y = padding + (i / 5) * (canvas.height - 2 * padding);
+        ctx.beginPath();
+        ctx.moveTo(padding, y);
+        ctx.lineTo(canvas.width - padding, y);
+        ctx.stroke();
+        
+        // Price labels
+        const price = max - (i / 5) * range;
+        ctx.fillStyle = '#666';
+        ctx.font = '12px sans-serif';
+        ctx.textAlign = 'right';
+        ctx.fillText('$' + price.toFixed(2), padding - 5, y + 4);
+    }
+    
+    // Draw price line
+    ctx.strokeStyle = '#667eea';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    
+    prices.forEach((price, i) => {
+        const x = padding + (i / (prices.length - 1)) * (canvas.width - 2 * padding);
+        const y = padding + ((max - price) / range) * (canvas.height - 2 * padding);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+    });
+    
+    ctx.stroke();
+    
+    // Draw points
+    ctx.fillStyle = '#667eea';
+    prices.forEach((price, i) => {
+        const x = padding + (i / (prices.length - 1)) * (canvas.width - 2 * padding);
+        const y = padding + ((max - price) / range) * (canvas.height - 2 * padding);
+        ctx.beginPath();
+        ctx.arc(x, y, 4, 0, Math.PI * 2);
+        ctx.fill();
+    });
+    
+    // Title
+    ctx.fillStyle = '#333';
+    ctx.font = 'bold 16px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(mealName + ' - Price History', canvas.width / 2, 20);
+    
+    // Current price
+    const currentPrice = prices[prices.length - 1];
+    const priceChange = prices.length > 1 ? currentPrice - prices[0] : 0;
+    const changePercent = prices[0] !== 0 ? (priceChange / prices[0] * 100) : 0;
+    ctx.fillStyle = priceChange >= 0 ? '#27ae60' : '#e74c3c';
+    ctx.font = '14px sans-serif';
+    ctx.fillText(
+        `$${currentPrice.toFixed(2)} (${priceChange >= 0 ? '+' : ''}${priceChange.toFixed(2)}, ${changePercent.toFixed(1)}%)`,
+        canvas.width / 2,
+        canvas.height - 10
+    );
 }

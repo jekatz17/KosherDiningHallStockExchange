@@ -201,6 +201,37 @@
             color: #667eea;
         }
         
+        .index-tab {
+            background: none;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-size: 16px;
+            color: #666;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+        }
+        
+        .index-tab:hover {
+            color: #667eea;
+        }
+        
+        .index-tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+            font-weight: 600;
+        }
+        
+        .ticker-mini {
+            width: 60px;
+            height: 30px;
+            cursor: pointer;
+        }
+        
+        #priceChart {
+            margin-top: 20px;
+        }
+        
         #loginSection {
             display: block;
         }
@@ -215,7 +246,8 @@
         <!-- Login Section -->
         <div id="loginSection">
             <div class="card" style="max-width: 400px; margin: 100px auto;">
-                <h2>U-M Dining Exchange Login</h2>
+                <h2 style="margin-bottom: 5px;">SQUM-KDHX</h2>
+                <p style="color: #666; font-size: 12px; margin-bottom: 20px;">South Quad at the University of Michigan<br>Kosher Dining Hall Exchange</p>
                 <div class="form-group">
                     <label>Username</label>
                     <input type="text" id="loginUsername" placeholder="Enter your name">
@@ -227,14 +259,17 @@
         <!-- Main App -->
         <div id="mainApp">
             <div class="header">
-                <h1>🍽️ U-M Dining Exchange</h1>
+                <div style="margin-bottom: 15px;">
+                    <h1 style="margin-bottom: 5px;">SQUM-KDHX</h1>
+                    <p style="color: #666; font-size: 14px; margin: 0;">South Quad at the University of Michigan - Kosher Dining Hall Exchange</p>
+                </div>
                 <div class="user-info">
                     <div>
                         <span id="username">User</span> | 
                         Balance: $<span id="balance">0.00</span> | 
                         IPO Price: <span class="ipo-price">$<span id="ipoPrice">200.00</span></span>
                     </div>
-                    <div>
+                    <div id="startIPOContainer">
                         <button class="btn btn-success" onclick="startIPO()">Start IPO</button>
                         <button class="btn btn-danger" onclick="logout()">Logout</button>
                     </div>
@@ -260,6 +295,15 @@
 
             <div class="card">
                 <h2>Market Summary</h2>
+                
+                <!-- Index Tabs -->
+                <div style="margin-bottom: 20px; border-bottom: 2px solid #eee;">
+                    <button class="index-tab active" onclick="switchIndex('all')" id="tab-all">All</button>
+                    <button class="index-tab" onclick="switchIndex('Chicken')" id="tab-Chicken">Chicken</button>
+                    <button class="index-tab" onclick="switchIndex('Beef')" id="tab-Beef">Beef</button>
+                    <button class="index-tab" onclick="switchIndex('Misc')" id="tab-Misc">Misc</button>
+                </div>
+                
                 <div style="overflow-x: auto;">
                     <table id="marketTable">
                         <thead>
@@ -269,13 +313,24 @@
                                 <th>IPO Supply</th>
                                 <th>Best Ask</th>
                                 <th>Best Bid</th>
-                                <th>Spread</th>
+                                <th>Chart</th>
                             </tr>
                         </thead>
                         <tbody id="marketBody">
                         </tbody>
                     </table>
                 </div>
+            </div>
+
+            <div class="card">
+                <h2>Price Chart</h2>
+                <div class="form-group" style="max-width: 400px;">
+                    <label>Select Meal</label>
+                    <select id="chartMealSelect" onchange="updateChart()">
+                        <option value="">Select a meal</option>
+                    </select>
+                </div>
+                <canvas id="priceChart" width="800" height="300" style="max-width: 100%;"></canvas>
             </div>
 
             <div class="card">
