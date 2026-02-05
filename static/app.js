@@ -358,7 +358,7 @@ function drawMiniChart(mealName) {
     const range = max - min || 1;
     
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.strokeStyle = prices[prices.length - 1] >= prices[0] ? '#27ae60' : '#e74c3c';
+    ctx.strokeStyle = prices[prices.length - 1] >= prices[0] ? '#27ae60' : '#c41e3a';
     ctx.lineWidth = 2;
     ctx.beginPath();
     
@@ -405,7 +405,7 @@ function updateChart() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
     // Draw axes
-    ctx.strokeStyle = '#ddd';
+    ctx.strokeStyle = '#333';
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(padding, padding);
@@ -414,7 +414,7 @@ function updateChart() {
     ctx.stroke();
     
     // Draw grid lines
-    ctx.strokeStyle = '#f0f0f0';
+    ctx.strokeStyle = '#222';
     for (let i = 0; i <= 5; i++) {
         const y = padding + (i / 5) * (canvas.height - 2 * padding);
         ctx.beginPath();
@@ -424,14 +424,14 @@ function updateChart() {
         
         // Price labels
         const price = max - (i / 5) * range;
-        ctx.fillStyle = '#666';
+        ctx.fillStyle = '#999';
         ctx.font = '12px sans-serif';
         ctx.textAlign = 'right';
         ctx.fillText('$' + price.toFixed(2), padding - 5, y + 4);
     }
     
     // Draw price line
-    ctx.strokeStyle = '#667eea';
+    ctx.strokeStyle = '#9b7fd4';
     ctx.lineWidth = 3;
     ctx.beginPath();
     
@@ -445,7 +445,7 @@ function updateChart() {
     ctx.stroke();
     
     // Draw points
-    ctx.fillStyle = '#667eea';
+    ctx.fillStyle = '#9b7fd4';
     prices.forEach((price, i) => {
         const x = padding + (i / (prices.length - 1)) * (canvas.width - 2 * padding);
         const y = padding + ((max - price) / range) * (canvas.height - 2 * padding);
@@ -455,7 +455,7 @@ function updateChart() {
     });
     
     // Title
-    ctx.fillStyle = '#333';
+    ctx.fillStyle = 'white';
     ctx.font = 'bold 16px sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText(mealName + ' - Price History', canvas.width / 2, 20);
@@ -464,7 +464,7 @@ function updateChart() {
     const currentPrice = prices[prices.length - 1];
     const priceChange = prices.length > 1 ? currentPrice - prices[0] : 0;
     const changePercent = prices[0] !== 0 ? (priceChange / prices[0] * 100) : 0;
-    ctx.fillStyle = priceChange >= 0 ? '#27ae60' : '#e74c3c';
+    ctx.fillStyle = priceChange >= 0 ? '#27ae60' : '#c41e3a';
     ctx.font = '14px sans-serif';
     ctx.fillText(
         `$${currentPrice.toFixed(2)} (${priceChange >= 0 ? '+' : ''}${priceChange.toFixed(2)}, ${changePercent.toFixed(1)}%)`,
