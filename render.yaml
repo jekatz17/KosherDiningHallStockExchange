@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: dining-exchange
+    env: python
+    region: oregon
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: DATABASE_URL
+        fromDatabase:
+          name: dining-exchange-db
+          property: connectionString
+
+databases:
+  - name: dining-exchange-db
+    plan: free
+    databaseName: dining_exchange
+    user: dining_user
